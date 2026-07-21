@@ -1,0 +1,21 @@
+# Ambiente Python — rigenerato da: uv sync
+.venv/
+__pycache__/
+*.pyc
+
+# Config locale di Claude Code (specifica della macchina/sessione, non del progetto)
+.claude/
+
+# PDF originali dei paper: personali, spesso soggetti a copyright — non versionare
+papers/*
+!papers/.gitkeep
+
+# Output della pipeline (markdown parsati, riassunti, manifest, grafo Graphify):
+# rigenerabile da papers/ con `main.py all`, ma consuma chiamate Claude — a
+# tua scelta versionarlo o no (vedi README, "Portare il progetto su un altro
+# computer"). Escluso di default per un repo GitHub pubblico.
+data/parsed/*
+!data/parsed/.gitkeep
+data/summaries/*
+!data/summaries/.gitkeep
+data/manifest.json

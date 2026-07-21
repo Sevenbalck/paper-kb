@@ -1,0 +1,31 @@
+# Configurazione pipeline paper-kb
+# Modifica liberamente: la pipeline rilegge questo file ad ogni esecuzione.
+
+paths:
+  papers_dir: papers
+  parsed_dir: data/parsed
+  summaries_dir: data/summaries
+  manifest: data/manifest.json
+
+docling:
+  # OCR per pagine scansionate/immagini senza testo incorporato. Se i tuoi PDF
+  # sono già digitali (testo selezionabile, non foto/scansioni) lascialo a
+  # false: l'OCR inizializza e fa inferenza con un modello separato (RapidOCR)
+  # su ogni pagina anche quando non serve, rallentando parecchio l'ingest.
+  # Rimettilo a true se aggiungi PDF scansionati, altrimenti Docling non
+  # riuscirebbe a estrarne il contenuto.
+  ocr: false
+
+claude:
+  # Le chiamate passano da Claude Code in modalità headless (claude -p), autenticato
+  # con la tua sottoscrizione Pro/Max — non con una API key. Nomi modello aggiornati:
+  # claude-sonnet-5, claude-opus-4-8, claude-haiku-4-5-20251001
+  model_summary: claude-sonnet-5              # riassunti: qualità migliore
+  # Se il markdown di un paper supera questa soglia di caratteri, per il riassunto
+  # viene condensato (titolo+abstract+intestazioni+conclusioni) invece di inviare
+  # il documento intero: risparmia token sui paper lunghi.
+  condense_threshold_chars: 20000
+
+# Nota: il grafo delle correlazioni tra paper (topic/metodi/dataset condivisi, Q&A)
+# e' gestito interamente da Graphify (comando esterno 'graphify', non da questo
+# file di configurazione). Vedi README, sezione Graphify.

@@ -1,0 +1,34 @@
+[project]
+name = "paper-kb"
+version = "0.2.0"
+description = "Pipeline locale per parsare paper scientifici (PDF complessi), riassumerli con Claude risparmiando token, e costruire un knowledge graph delle correlazioni tra paper con Graphify."
+requires-python = ">=3.11"
+dependencies = [
+    "docling>=2.15.0",
+    "pyyaml>=6.0.2",
+    "tqdm>=4.66.5",
+    "click>=8.1.7",
+    "streamlit>=1.59.2",
+    "graphifyy>=0.9.0",
+    # RapidOCR (usato da Docling per l'OCR) ha onnxruntime come motore di default,
+    # molto più veloce di torch per l'inferenza su CPU. Senza questa dipendenza
+    # esplicita, RapidOCR ripiega silenziosamente sul backend torch (ImportError su
+    # onnxruntime) — capitava prima per caso, perché chromadb la portava con sé come
+    # dipendenza transitiva; rimossa insieme a chromadb, va reintrodotta a mano.
+    "onnxruntime>=1.14.1",
+    "fastapi>=0.139.2",
+    "uvicorn>=0.51.0",
+    "python-multipart>=0.0.32",
+]
+# Nota: le chiamate a Claude passano dal comando "claude" di Claude Code (autenticato
+# con la sottoscrizione Pro/Max via `claude login`), non dall'SDK/API Anthropic:
+# nessuna dipendenza Python per quello, va installato a parte (vedi README).
+#
+# graphifyy e' incluso come dipendenza normale (non serve piu' 'uv tool install'):
+# graphify_kb.py lo invoca sempre in modo headless via subprocess (mai il comando
+# interattivo /graphify), quindi basta che sia nel .venv del progetto, raggiungibile
+# da 'uv run'. Se in futuro serve anche /graphify dentro Claude Code fuori da 'uv run',
+# va comunque installato globalmente a parte: uv tool install graphifyy.
+
+[tool.uv]
+package = false

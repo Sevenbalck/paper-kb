@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paper-kb — knowledge base del laboratorio</title>
+<style>
+  :root {
+    --paper: #EDF0E9;
+    --panel: #F8FAF5;
+    --panel-raised: #FFFFFF;
+    --ink: #1B2420;
+    --ink-dim: #5C665F;
+    --line: #D7DBCE;
+    --accent: #2C4A6E;
+    --accent-ink: #F3F6FA;
+    --accent-soft: #DEE6ED;
+    --ok: #3C7A5C;
+    --ok-soft: #DCEBE2;
+    --err: #9C4A34;
+    --err-soft: #F1E0D9;
+    --node-warm: #B5651D;
+    --code-bg: #E7EBDE;
+    --shadow-sm: 0 1px 2px rgba(20,24,20,0.05);
+    --shadow-md: 0 4px 16px rgba(20,24,20,0.07);
+    --serif: "Palatino Linotype", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #141815;
+      --panel: #1A201B;
+      --panel-raised: #212822;
+      --ink: #E7ECE4;
+      --ink-dim: #92998F;
+      --line: #333B34;
+      --accent: #86ADD4;
+      --accent-ink: #101820;
+      --accent-soft: #223347;
+      --ok: #6FBF95;
+      --ok-soft: #1E3229;
+      --err: #E08868;
+      --err-soft: #3A241B;
+      --node-warm: #D48A4E;
+      --code-bg: #1F251E;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141815; --panel: #1A201B; --panel-raised: #212822; --ink: #E7ECE4; --ink-dim: #92998F;
+    --line: #333B34; --accent: #86ADD4; --accent-ink: #101820; --accent-soft: #223347;
+    --ok: #6FBF95; --ok-soft: #1E3229; --err: #E08868; --err-soft: #3A241B; --node-warm: #D48A4E;
+    --code-bg: #1F251E; --shadow-sm: 0 1px 2px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --paper: #EDF0E9; --panel: #F8FAF5; --panel-raised: #FFFFFF; --ink: #1B2420; --ink-dim: #5C665F;
+    --line: #D7DBCE; --accent: #2C4A6E; --accent-ink: #F3F6FA; --accent-soft: #DEE6ED;
+    --ok: #3C7A5C; --ok-soft: #DCEBE2; --err: #9C4A34; --err-soft: #F1E0D9; --node-warm: #B5651D;
+    --code-bg: #E7EBDE; --shadow-sm: 0 1px 2px rgba(20,24,20,0.05); --shadow-md: 0 4px 16px rgba(20,24,20,0.07);
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light dark; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+  .icon { width: 16px; height: 16px; flex: none; display: inline-block; vertical-align: -3px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px 90px; }
+
+  /* --------------------------------------------------------------- titlebar */
+  header.titlebar {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; padding: 12px 20px; margin: 0 0 0;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; padding: 2px; }
+  .brand-mark { border-radius: 8px; box-shadow: var(--shadow-sm); }
+  .brand-name { font: 600 17px/1 var(--serif); color: var(--ink); letter-spacing: 0.01em; }
+  .titlebar-right { display: flex; align-items: center; gap: 10px; position: relative; }
+
+  .conn-pill {
+    display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-dim);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 9px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-dim); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .dot.err { background: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
+
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--ink-dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--ink); background: var(--panel-raised); }
+  .icon-btn:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  .popover {
+    position: absolute; top: calc(100% + 8px); right: 0; width: 300px; z-index: 50;
+    background: var(--panel-raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-md);
+    padding: 14px 16px;
+  }
+  .popover[hidden] { display: none; }
+  .popover .field-label { margin-bottom: 6px; }
+  .popover-row { display: flex; gap: 8px; }
+  .popover input[type=text] { flex: 1; min-width: 0; }
+
+  /* --------------------------------------------------------------- landing */
+  #landing { padding-top: 10px; }
+  .eyebrow {
+    font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent);
+    margin: 34px 0 14px;
+  }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; align-items: center;
+  }
+  .hero-headline {
+    font: 400 40px/1.16 var(--serif); margin: 0 0 18px; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .hero-sub { color: var(--ink-dim); font-size: 15px; max-width: 46ch; margin: 0 0 26px; }
+  .btn {
+    font: 600 13.5px/1 var(--sans); padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease; box-shadow: var(--shadow-sm);
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn:active:not(:disabled) { transform: translateY(0); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.danger { background: var(--err); border-color: var(--err); color: var(--err-soft); }
+  .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink-dim); }
+  .btn.ghost:hover:not(:disabled) { background: var(--line); box-shadow: none; }
+  .btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.lg { padding: 12px 22px; font-size: 14.5px; }
+
+  .hero-illustration { display: flex; align-items: center; gap: 18px; min-height: 300px; }
+  .hero-papers { position: relative; width: 150px; height: 190px; flex: none; }
+  .hero-card {
+    position: absolute; top: 10px; left: 0; width: 130px; height: 160px; padding: 12px 12px;
+    background: var(--panel-raised); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow-md);
+    transform: rotate(var(--rot, 0deg)); z-index: var(--z, 0); font-size: 11px; color: var(--ink-dim);
+  }
+  .hero-card-id { font: 600 10px var(--mono); color: var(--accent); display: block; margin-bottom: 6px; letter-spacing: 0.02em; }
+  .hero-card p { margin: 0 0 8px; font: 13px/1.35 var(--serif); color: var(--ink); }
+  .hero-card-line { display: block; height: 5px; border-radius: 3px; background: var(--line); margin-top: 5px; }
+  .hero-card.placeholder { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+  .hero-arrow-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; color: var(--ink-dim); }
+  .hero-arrow-col span { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+  #heroCanvas { flex: 1; width: 100%; height: 260px; }
+
+  .process-strip {
+    display: flex; align-items: stretch; gap: 0; margin: 46px 0 40px; border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line); padding: 22px 0;
+  }
+  .process-step { flex: 1; padding: 0 22px; }
+  .process-step:not(:first-child) { border-left: 1px solid var(--line); }
+  .process-step h3 { font: 600 15px var(--sans); margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .process-step h3 .chevron { color: var(--accent); }
+  .process-step p { margin: 0; color: var(--ink-dim); font-size: 13px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 54px; }
+  .stat-tile {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+    border-left: 3px solid var(--accent);
+  }
+  .stat-label { font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); }
+  .stat-value { font: 600 28px/1.3 var(--sans); font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  @media (max-width: 760px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .process-strip { flex-direction: column; }
+    .process-step:not(:first-child) { border-left: none; border-top: 1px solid var(--line); padding-top: 16px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* --------------------------------------------------------------- app shell */
+  nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 10px 0 22px; }
+  nav.tabs button {
+    background: none; border: none; padding: 10px 16px; font: 600 13.5px var(--sans); cursor: pointer;
+    color: var(--ink-dim); border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: 7px;
+  }
+  nav.tabs button.active { color: var(--ink); border-bottom-color: var(--accent); }
+  nav.tabs button:hover:not(.active) { color: var(--ink); }
+
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px 22px; margin-bottom: 18px; box-shadow: var(--shadow-sm);
+  }
+  .card h2 {
+    font: 600 15px var(--sans); margin: 0 0 4px; display: flex; align-items: center; gap: 9px;
+  }
+  .card h2 .icon { color: var(--accent); width: 18px; height: 18px; }
+  .card p.desc { color: var(--ink-dim); font-size: 13px; margin: 0 0 14px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .divider { border: none; border-top: 1px solid var(--line); margin: 18px 0; }
+
+  input[type=text], input[type=search], select, textarea {
+    font: 13px var(--sans); padding: 8px 10px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--panel-raised); color: var(--ink);
+  }
+  label.chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-dim); cursor: pointer; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td:first-child, td.mono { font-family: var(--mono); font-size: 12.5px; }
+  th { color: var(--ink-dim); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr:hover { background: var(--panel-raised); }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.no { background: var(--line); color: var(--ink-dim); }
+
+  .log {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; font: 12px/1.5 var(--mono); white-space: pre-wrap;
+    max-height: 320px; overflow-y: auto; color: var(--ink);
+  }
+  .progress { height: 5px; border-radius: 999px; background: var(--code-bg); overflow: hidden; margin: 10px 0; }
+  .progress > div { height: 100%; background: var(--accent); width: 0%; transition: width .3s; }
+
+  .banner { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+  .banner.err { background: var(--err-soft); color: var(--err); }
+  .banner.ok { background: var(--ok-soft); color: var(--ok); }
+
+  .md h1, .md h2, .md h3 { margin-top: 1em; font-family: var(--serif); font-weight: 600; }
+  .md h1:first-child, .md h2:first-child, .md h3:first-child { margin-top: 0; }
+  .md code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: var(--mono); }
+  .md pre { background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow-x: auto; }
+  .md pre code { background: none; padding: 0; }
+  .md ul { padding-left: 20px; }
+  .md a { color: var(--accent); }
+
+  #nodesTableWrap { max-height: 380px; overflow-y: auto; }
+  details > summary { user-select: none; }
+  details[open] > summary { margin-bottom: 2px; }
+
+  .graph-frame-wrap { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  iframe.graph-frame { width: 100%; height: 620px; border: none; display: block; }
+  .empty { color: var(--ink-dim); font-size: 13px; font-style: italic; }
+  .field-label { font-size: 12px; color: var(--ink-dim); margin-bottom: 4px; display: block; }
+  .stack { display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+
+<header class="titlebar">
+  <button class="brand" id="logoHome" title="Torna all'introduzione">
+    <svg class="brand-mark" width="28" height="28" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" rx="8" fill="var(--accent)"></rect>
+      <path d="M11 9h7l4 4v10a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="none" stroke="var(--accent-ink)" stroke-width="1.6"></path>
+      <path d="M18 9v4h4" fill="none" stroke="var(--accent-ink)" stroke-width="1.6"></path>
+      <circle cx="14.2" cy="18.6" r="1.3" fill="var(--accent-ink)"></circle>
+      <circle cx="18.6" cy="21.4" r="1.3" fill="var(--accent-ink)"></circle>
+      <path d="M14.2 18.6L18.6 21.4" stroke="var(--accent-ink)" stroke-width="1.3"></path>
+    </svg>
+    <span class="brand-name">paper-kb</span>
+  </button>
+  <div class="titlebar-right">
+    <span class="conn-pill"><span class="dot" id="connDot"></span><span id="connLabel">verifica connessione…</span></span>
+    <button class="icon-btn" id="settingsToggle" title="Impostazioni connessione" aria-haspopup="true">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.2M12 18.8V21M4.4 4.4l1.55 1.55M18.05 18.05L19.6 19.6M3 12h2.2M18.8 12H21M4.4 19.6l1.55-1.55M18.05 5.95L19.6 4.4"></path></svg>
+    </button>
+    <div class="popover" id="settingsPopover" hidden>
+      <label class="field-label" for="apiBase">URL del backend API</label>
+      <div class="popover-row">
+        <input id="apiBase" type="text" spellcheck="false">
+        <button class="btn" id="apiSaveBtn">Salva</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============================================================ LANDING -->
+  <div id="landing">
+    <p class="eyebrow">Knowledge base per la letteratura scientifica</p>
+    <div class="hero-grid">
+      <div>
+        <h1 class="hero-headline">Dai PDF sparsi al grafo che li collega.</h1>
+        <p class="hero-sub">
+          Carica i paper del laboratorio: vengono ripuliti in locale, riassunti una volta sola
+          (cachati su disco) e collegati da Graphify in un grafo di entità e correlazioni
+          interrogabile in linguaggio naturale — tutto sulla tua macchina, tranne le chiamate
+          a Claude strettamente necessarie.
+        </p>
+        <button class="btn primary lg" id="ctaEnter">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg>
+          Apri la libreria
+        </button>
+      </div>
+      <div class="hero-illustration">
+        <div class="hero-papers" id="heroPapers"></div>
+        <div class="hero-arrow-col">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="M13 6l7 6-7 6"></path></svg>
+          <span>Graphify</span>
+        </div>
+        <canvas id="heroCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="process-strip">
+      <div class="process-step">
+        <h3><svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>Ingest</h3>
+        <p>PDF → markdown pulito, 100% locale (Docling). Solo i file nuovi o modificati vengono riprocessati.</p>
+      </div>
+      <div class="process-step">
+        <h3><svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>Riassumi</h3>
+        <p>Una sintesi per paper, cachata su disco: la generi (e paghi in token) una volta sola.</p>
+      </div>
+      <div class="process-step">
+        <h3><svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>Graphify</h3>
+        <p>Entità e correlazioni estratte in un grafo che puoi interrogare in linguaggio naturale.</p>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="stat-label">Paper in libreria</div><div class="stat-value" id="statPapers">—</div></div>
+      <div class="stat-tile"><div class="stat-label">Riassunti pronti</div><div class="stat-value" id="statSummarized">—</div></div>
+      <div class="stat-tile"><div class="stat-label">Nodi nel grafo</div><div class="stat-value" id="statNodes">—</div></div>
+      <div class="stat-tile"><div class="stat-label">Community rilevate</div><div class="stat-value" id="statCommunities">—</div></div>
+    </div>
+  </div>
+
+  <!-- ================================================================ APP -->
+  <div id="app" style="display:none">
+
+  <nav class="tabs">
+    <button data-tab="stato" class="active">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+      Stato
+    </button>
+    <button data-tab="pipeline">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg>
+      Pipeline
+    </button>
+    <button data-tab="graphify">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.2"></circle><circle cx="18" cy="6.5" r="2.2"></circle><circle cx="12" cy="18" r="2.2"></circle><path d="M7.9 7.7L10.5 16M16.1 7.7L13.5 16M8.2 6.5h7.6"></path></svg>
+      Graphify
+    </button>
+    <button data-tab="riassunti">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"></path><path d="M13.5 3.5V8H18"></path><path d="M9 12.5h6M9 15.5h6M9 9.5h2.5"></path></svg>
+      Riassunti
+    </button>
+  </nav>
+
+  <!-- ============================================================ STATO -->
+  <section class="tab active" id="tab-stato">
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9"></path></svg>Stato della libreria</h2>
+      <p class="desc">Verifica setup Claude Code e consulta il manifest dei paper processati.</p>
+      <div class="row">
+        <button class="btn" id="btnCheck">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>
+          Verifica setup Claude Code
+        </button>
+        <button class="btn" id="btnRefreshStatus">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5"></path><path d="M4 4v4.5h4.5"></path><path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5"></path><path d="M20 20v-4.5h-4.5"></path></svg>
+          Aggiorna tabella
+        </button>
+      </div>
+      <div id="checkResult"></div>
+      <hr class="divider">
+      <div id="statusTableWrap"><p class="empty">Caricamento…</p></div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"></path><path d="M9.5 7V4.8c0-.4.4-.8.9-.8h3.2c.5 0 .9.4.9.8V7"></path><path d="M7 7l.8 12a1.6 1.6 0 0 0 1.6 1.5h5.2A1.6 1.6 0 0 0 16.2 19L17 7"></path><path d="M10.3 11v6M13.7 11v6"></path></svg>Elimina un paper</h2>
+      <p class="desc">Rimuove il paper da papers/, data/parsed/, data/summaries/ e dal manifest. NON tocca il grafo Graphify — rilancia "graphify-extract" dopo, se serve. Operazione irreversibile.</p>
+      <div class="stack" style="max-width:420px">
+        <label class="field-label">Paper da eliminare</label>
+        <select id="deleteSelect"></select>
+        <label class="chk" style="margin-top:8px">
+          <input type="checkbox" id="deleteConfirm"> Confermo: elimina definitivamente
+        </label>
+        <div style="margin-top:8px">
+          <button class="btn danger" id="btnDelete" disabled>Elimina definitivamente</button>
+        </div>
+      </div>
+      <div id="deleteResult"></div>
+    </div>
+  </section>
+
+  <!-- ========================================================= PIPELINE -->
+  <section class="tab" id="tab-pipeline">
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"></path><path d="M8 8l4-4 4 4"></path><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"></path></svg>Carica nuovi PDF</h2>
+      <p class="desc">I file finiscono in papers/.</p>
+      <div class="row">
+        <input type="file" id="pdfFiles" accept="application/pdf" multiple>
+        <button class="btn primary" id="btnUpload">Carica</button>
+      </div>
+      <div id="uploadResult"></div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg>Esegui la pipeline</h2>
+      <div class="stack" style="gap:10px">
+        <label class="chk"><input type="radio" name="step" value="all" checked>
+          <span><b>all</b> — ingest → graphify-extract (pipeline completa). Consuma token Claude.</span></label>
+        <label class="chk"><input type="radio" name="step" value="ingest">
+          <span><b>ingest</b> — PDF → markdown (Docling), 100% locale.</span></label>
+        <label class="chk"><input type="radio" name="step" value="graphify-extract">
+          <span><b>graphify-extract</b> — costruisce/aggiorna il grafo. Consuma token Claude.</span></label>
+        <label class="chk"><input type="radio" name="step" value="graphify-merge-dupes">
+          <span><b>graphify-merge-dupes</b> — fonde nodi duplicati sul grafo esistente (es. "GLUT1 (Glucose Transporter)" e "GLUT1 Glucose Transporter" rimasti separati). 100% locale, gratuito, nessun rifacimento dell'estrazione.</span></label>
+      </div>
+      <div id="pipelineMergeDupesRow" style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="pipelineAutoMerge" checked> fondi automaticamente i nodi duplicati dopo graphify-extract</label>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn primary" id="btnRunPipeline">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg>
+          Esegui
+        </button>
+      </div>
+      <div id="pipelineProgressWrap" style="display:none; margin-top:14px">
+        <div class="progress"><div id="pipelineProgressBar"></div></div>
+        <div class="log" id="pipelineLog"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= GRAPHIFY -->
+  <section class="tab" id="tab-graphify">
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.2"></circle><circle cx="18" cy="6.5" r="2.2"></circle><circle cx="12" cy="18" r="2.2"></circle><path d="M7.9 7.7L10.5 16M16.1 7.7L13.5 16M8.2 6.5h7.6"></path></svg>Grafo Graphify</h2>
+      <p class="desc">Estrazione semantica + community detection su data/parsed/. La deduplicazione nativa di Graphify opera entro il singolo documento, non sull'intero corpus: lo stesso concetto in paper diversi può restare frammentato in più nodi (es. "GLUT1 (Glucose Transporter)" e "GLUT1 Glucose Transporter" come nodi separati) — la fusione qui sotto corregge questo caso.</p>
+      <div class="row">
+        <span class="dot" id="graphifyDot"></span>
+        <span id="graphifyLabel" style="font-size:13px; color:var(--ink-dim)">verifica…</span>
+        <label class="chk" style="margin-left:auto"><input type="checkbox" id="gfAutoMerge" checked> fondi duplicati dopo l'estrazione</label>
+        <button class="btn primary" id="btnBuildGraph">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.2"></circle><circle cx="18" cy="6.5" r="2.2"></circle><circle cx="12" cy="18" r="2.2"></circle><path d="M7.9 7.7L10.5 16M16.1 7.7L13.5 16M8.2 6.5h7.6"></path></svg>
+          Costruisci / aggiorna grafo
+        </button>
+      </div>
+      <div id="graphBuildProgressWrap" style="display:none; margin-top:14px">
+        <div class="progress"><div id="graphBuildProgressBar"></div></div>
+        <div class="log" id="graphBuildLog"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>Fondi nodi duplicati su un grafo esistente</h2>
+      <p class="desc">Rilancia solo la fusione dei duplicati senza rifare l'estrazione — locale, gratuito, nessuna chiamata Claude. Utile se avevi disattivato il merge automatico sopra, o su un grafo costruito prima che questo step fosse disponibile. Scrive un backup (graph.pre-merge.json) prima di sovrascrivere graph.json.</p>
+      <div class="row">
+        <button class="btn" id="btnMergeDupes" style="margin-left:auto">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>
+          Fondi nodi duplicati ora
+        </button>
+      </div>
+      <div id="mergeDupesProgressWrap" style="display:none; margin-top:14px">
+        <div class="progress"><div id="mergeDupesProgressBar"></div></div>
+        <div class="log" id="mergeDupesLog"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>Fai una domanda al grafo</h2>
+      <p class="desc">2 chiamate Claude per domanda (riformulazione in inglese + sintesi della risposta).</p>
+      <div class="row">
+        <input type="text" id="gfQuestion" placeholder="cosa collega PD-1 al metabolismo dei macrofagi?" style="flex:1; min-width:260px">
+        <label class="chk"><input type="checkbox" id="gfShowRaw"> mostra sottografo grezza</label>
+        <button class="btn primary" id="btnAsk">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>
+          Chiedi
+        </button>
+      </div>
+      <div id="askResult" style="margin-top:14px"></div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="18.5" r="2"></circle><circle cx="18.5" cy="5.5" r="2"></circle><path d="M7 17L17 7"></path></svg>Percorso tra due nodi</h2>
+      <div class="row">
+        <input type="text" id="pathA" placeholder="PD-1">
+        <input type="text" id="pathB" placeholder="MCT1">
+        <button class="btn" id="btnPath">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="18.5" r="2"></circle><circle cx="18.5" cy="5.5" r="2"></circle><path d="M7 17L17 7"></path></svg>
+          Percorso
+        </button>
+      </div>
+      <div id="pathResult" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Sfoglia nodi e community</h2>
+      <p class="desc">Terminologia esatta del grafo — usala nelle domande invece di indovinare.</p>
+      <div class="row">
+        <select id="nodeCommunityFilter"><option value="">(tutte le community)</option></select>
+        <input type="search" id="nodeTextFilter" placeholder="filtra per testo nel nome">
+      </div>
+      <details id="nodesDetails" style="margin-top:14px">
+        <summary id="nodesSummary" style="cursor:pointer; font-size:13px; color:var(--ink-dim)">—</summary>
+        <div id="nodesTableWrap" style="margin-top:12px"><p class="empty">—</p></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"></path><path d="M13.5 3.5V8H18"></path><path d="M9 12.5h6M9 15.5h6M9 9.5h2.5"></path></svg>Report ed esplorazione visiva</h2>
+      <details>
+        <summary style="cursor:pointer; font-size:13px; color:var(--ink-dim)">GRAPH_REPORT.md</summary>
+        <div class="md" id="graphReport" style="margin-top:12px"></div>
+      </details>
+      <hr class="divider">
+      <div id="graphHtmlWrap"><p class="empty">—</p></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= RIASSUNTI -->
+  <section class="tab" id="tab-riassunti">
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"></path><path d="M13.5 3.5V8H18"></path><path d="M9 12.5h6M9 15.5h6M9 9.5h2.5"></path></svg>Riassunto di un paper</h2>
+      <p class="desc">Cachato su disco: la prima generazione consuma 1 chiamata Claude, le successive sono gratis.</p>
+      <div class="row">
+        <select id="summarySelect"></select>
+        <label class="chk"><input type="checkbox" id="summaryForce"> rigenera anche se già cachato</label>
+        <button class="btn primary" id="btnSummary">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"></path><path d="M13.5 3.5V8H18"></path><path d="M9 12.5h6M9 15.5h6M9 9.5h2.5"></path></svg>
+          Genera / mostra riassunto
+        </button>
+      </div>
+      <div class="md" id="summaryResult" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  </div><!-- /#app -->
+
+</div>
+
+<script>
+"use strict";
+
+const $ = (sel, el) => (el || document).querySelector(sel);
+const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
+
+// ---------------------------------------------------------------- config --
+let API_BASE = localStorage.getItem("paperkb_api_base") || "http://127.0.0.1:8000";
+$("#apiBase").value = API_BASE;
+
+$("#apiSaveBtn").addEventListener("click", () => {
+  API_BASE = $("#apiBase").value.trim().replace(/\/$/, "") || "http://127.0.0.1:8000";
+  localStorage.setItem("paperkb_api_base", API_BASE);
+  $("#settingsPopover").hidden = true;
+  checkConnection();
+  refreshAll();
+});
+
+$("#settingsToggle").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("#settingsPopover").hidden = !$("#settingsPopover").hidden;
+});
+document.addEventListener("click", (e) => {
+  const pop = $("#settingsPopover");
+  if (!pop.hidden && !pop.contains(e.target) && e.target !== $("#settingsToggle")) pop.hidden = true;
+});
+
+// ------------------------------------------------------- landing <-> app --
+$("#ctaEnter").addEventListener("click", () => {
+  $("#landing").style.display = "none";
+  $("#app").style.display = "block";
+});
+$("#logoHome").addEventListener("click", () => {
+  $("#app").style.display = "none";
+  $("#landing").style.display = "block";
+});
+
+async function api(path, opts) {
+  const res = await fetch(API_BASE + path, opts);
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { const j = await res.json(); msg = j.detail || msg; } catch (_) {}
+    throw new Error(`${res.status} ${msg}`);
+  }
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") ? res.json() : res.text();
+}
+
+function banner(container, message, kind) {
+  container.innerHTML = `<div class="banner ${kind}">${escapeHtml(message)}</div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
+// ---- minimal markdown -> html (headers, bold/italic, code, lists, links) --
+function mdToHtml(md) {
+  if (!md) return "";
+  const lines = md.split("\n");
+  let html = "";
+  let inCode = false, inList = false;
+  for (let raw of lines) {
+    if (raw.trim().startsWith("```")) {
+      html += inCode ? "</code></pre>" : "<pre><code>";
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) { html += escapeHtml(raw) + "\n"; continue; }
+
+    let line = escapeHtml(raw);
+    const isListItem = /^\s*[-*]\s+/.test(raw);
+    if (isListItem && !inList) { html += "<ul>"; inList = true; }
+    if (!isListItem && inList) { html += "</ul>"; inList = false; }
+
+    line = line.replace(/^### (.*)/, "<h3>$1</h3>")
+               .replace(/^## (.*)/, "<h2>$1</h2>")
+               .replace(/^# (.*)/, "<h1>$1</h1>")
+               .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+               .replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, "<i>$1</i>")
+               .replace(/`([^`]+)`/g, "<code>$1</code>")
+               .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    if (isListItem) {
+      html += "<li>" + line.replace(/^\s*[-*]\s+/, "") + "</li>";
+    } else if (/^<h[1-3]>/.test(line)) {
+      html += line;
+    } else if (line.trim() === "") {
+      html += "<br>";
+    } else {
+      html += "<p>" + line + "</p>";
+    }
+  }
+  if (inList) html += "</ul>";
+  if (inCode) html += "</code></pre>";
+  return html;
+}
+
+// ------------------------------------------------------------- tabs -----
+$$("nav.tabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$("nav.tabs button").forEach(b => b.classList.remove("active"));
+    $$("section.tab").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    $("#tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ------------------------------------------------------- connessione ----
+async function checkConnection() {
+  const dot = $("#connDot"), label = $("#connLabel");
+  try {
+    await api("/status");
+    dot.className = "dot ok";
+    label.textContent = "connesso";
+  } catch (e) {
+    dot.className = "dot err";
+    label.textContent = "non raggiungibile";
+  }
+}
+
+// -------------------------------------------------------------- Stato ---
+let _lastRows = [];
+
+async function loadStatus() {
+  const wrap = $("#statusTableWrap");
+  const select = $("#deleteSelect");
+  try {
+    const data = await api("/status");
+    const rows = data.papers || [];
+    _lastRows = rows;
+    if (!rows.length) {
+      wrap.innerHTML = `<p class="empty">Nessun paper nel manifest ancora. Aggiungi dei PDF nella tab Pipeline e lancia "all".</p>`;
+      select.innerHTML = "";
+      $("#btnDelete").disabled = true;
+      return rows;
+    }
+    wrap.innerHTML = `
+      <p style="font-size:13px; margin:0 0 10px">${rows.length} paper nel manifest (${escapeHtml(data.manifest_path)})</p>
+      <table>
+        <thead><tr><th>ID</th><th>Titolo</th><th>Parsed</th><th>Summarized</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${escapeHtml(r.id)}</td>
+            <td>${escapeHtml(r.titolo)}</td>
+            <td><span class="badge ${r.parsed ? "ok" : "no"}">${r.parsed ? "OK" : "-"}</span></td>
+            <td><span class="badge ${r.summarized ? "ok" : "no"}">${r.summarized ? "OK" : "-"}</span></td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+    select.innerHTML = rows.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.id)}</option>`).join("");
+    $("#btnDelete").disabled = !$("#deleteConfirm").checked;
+    return rows;
+  } catch (e) {
+    wrap.innerHTML = "";
+    banner(wrap, "Errore nel caricare lo stato: " + e.message, "err");
+    return [];
+  }
+}
+
+function populateSelectors(rows) {
+  const ids = rows.map(r => r.id);
+  $("#summarySelect").innerHTML = ids.length
+    ? ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("")
+    : "<option value=''>(nessun paper)</option>";
+}
+
+$("#btnCheck").addEventListener("click", async () => {
+  const out = $("#checkResult");
+  out.innerHTML = "";
+  $("#btnCheck").disabled = true;
+  try {
+    const r = await api("/check", { method: "POST" });
+    banner(out, `Claude Code OK, ha risposto: "${r.reply}"`, "ok");
+  } catch (e) {
+    banner(out, "Errore: " + e.message, "err");
+  } finally {
+    $("#btnCheck").disabled = false;
+  }
+});
+
+$("#btnRefreshStatus").addEventListener("click", refreshAll);
+
+$("#deleteConfirm").addEventListener("change", () => {
+  $("#btnDelete").disabled = !$("#deleteConfirm").checked;
+});
+
+$("#btnDelete").addEventListener("click", async () => {
+  const id = $("#deleteSelect").value;
+  const out = $("#deleteResult");
+  if (!id) return;
+  $("#btnDelete").disabled = true;
+  try {
+    const r = await api("/papers/" + encodeURIComponent(id), { method: "DELETE" });
+    banner(out, `'${id}' eliminato: ` + r.removed.join(", "), "ok");
+    $("#deleteConfirm").checked = false;
+    await refreshAll();
+  } catch (e) {
+    banner(out, "Errore durante l'eliminazione: " + e.message, "err");
+    $("#btnDelete").disabled = false;
+  }
+});
+
+// ----------------------------------------------------------- Pipeline ---
+$("#btnUpload").addEventListener("click", async () => {
+  const input = $("#pdfFiles");
+  const out = $("#uploadResult");
+  if (!input.files.length) return;
+  const fd = new FormData();
+  for (const f of input.files) fd.append("files", f);
+  $("#btnUpload").disabled = true;
+  try {
+    const r = await api("/papers/upload", { method: "POST", body: fd });
+    banner(out, `${r.saved.length} PDF salvati in ${r.dir}`, "ok");
+    input.value = "";
+  } catch (e) {
+    banner(out, "Errore durante l'upload: " + e.message, "err");
+  } finally {
+    $("#btnUpload").disabled = false;
+  }
+});
+
+function streamJob(jobId, logEl, progressBarEl, onDone) {
+  const es = new EventSource(API_BASE + "/jobs/" + jobId + "/stream");
+  let phases = 0;
+  es.onmessage = (ev) => {
+    let payload = null;
+    try { payload = JSON.parse(ev.data); } catch (_) {}
+    if (payload && payload.event === "done") {
+      if (progressBarEl) progressBarEl.style.width = "100%";
+      logEl.textContent += "\n=== Completato ===\n";
+      logEl.scrollTop = logEl.scrollHeight;
+      es.close();
+      onDone(true, null);
+      return;
+    }
+    if (payload && payload.event === "error") {
+      logEl.textContent += "\n!! ERRORE: " + payload.message + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+      es.close();
+      onDone(false, payload.message);
+      return;
+    }
+    logEl.textContent += ev.data;
+    if (/^\n?=== /.test(ev.data) && progressBarEl) {
+      phases += 1;
+      progressBarEl.style.width = Math.min(90, phases * 30) + "%";
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  es.onerror = () => {
+    es.close();
+    onDone(false, "connessione SSE interrotta");
+  };
+}
+
+function updatePipelineMergeRow() {
+  const step = $$('input[name=step]').find(r => r.checked)?.value;
+  $("#pipelineMergeDupesRow").style.display = (step === "all" || step === "graphify-extract") ? "block" : "none";
+}
+$$('input[name=step]').forEach(r => r.addEventListener("change", updatePipelineMergeRow));
+updatePipelineMergeRow();
+
+$("#btnRunPipeline").addEventListener("click", async () => {
+  const step = $$('input[name=step]').find(r => r.checked).value;
+  const wrap = $("#pipelineProgressWrap");
+  const bar = $("#pipelineProgressBar");
+  const log = $("#pipelineLog");
+  wrap.style.display = "block";
+  bar.style.width = "0%";
+  log.textContent = "";
+  $("#btnRunPipeline").disabled = true;
+  try {
+    const r = await api("/pipeline/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, merge_dupes: $("#pipelineAutoMerge").checked }),
+    });
+    streamJob(r.job_id, log, bar, async (ok) => {
+      $("#btnRunPipeline").disabled = false;
+      if (ok) await refreshAll();
+    });
+  } catch (e) {
+    log.textContent += "\nErrore nell'avvio: " + e.message;
+    $("#btnRunPipeline").disabled = false;
+  }
+});
+
+// ------------------------------------------------------------ Graphify --
+async function loadGraphifyStatus() {
+  const dot = $("#graphifyDot"), label = $("#graphifyLabel");
+  try {
+    const r = await api("/graphify/status");
+    dot.className = "dot " + (r.installed ? "ok" : "err");
+    label.textContent = r.installed ? "comando 'graphify' trovato" : "comando 'graphify' non trovato nel PATH — lancia 'uv sync'";
+    $("#btnBuildGraph").disabled = !r.installed;
+    return r.installed;
+  } catch (e) {
+    dot.className = "dot err";
+    label.textContent = "impossibile verificare (" + e.message + ")";
+    return false;
+  }
+}
+
+$("#btnBuildGraph").addEventListener("click", async () => {
+  const wrap = $("#graphBuildProgressWrap");
+  const bar = $("#graphBuildProgressBar");
+  const log = $("#graphBuildLog");
+  wrap.style.display = "block";
+  bar.style.width = "0%";
+  log.textContent = "";
+  $("#btnBuildGraph").disabled = true;
+  try {
+    const r = await api("/pipeline/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "graphify-extract", merge_dupes: $("#gfAutoMerge").checked }),
+    });
+    streamJob(r.job_id, log, bar, async (ok) => {
+      $("#btnBuildGraph").disabled = false;
+      if (ok) await loadGraphifyPanels();
+    });
+  } catch (e) {
+    log.textContent += "\nErrore nell'avvio: " + e.message;
+    $("#btnBuildGraph").disabled = false;
+  }
+});
+
+$("#btnMergeDupes").addEventListener("click", async () => {
+  const wrap = $("#mergeDupesProgressWrap");
+  const bar = $("#mergeDupesProgressBar");
+  const log = $("#mergeDupesLog");
+  wrap.style.display = "block";
+  bar.style.width = "0%";
+  log.textContent = "";
+  $("#btnMergeDupes").disabled = true;
+  try {
+    const r = await api("/pipeline/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "graphify-merge-dupes" }),
+    });
+    streamJob(r.job_id, log, bar, async (ok) => {
+      $("#btnMergeDupes").disabled = false;
+      if (ok) await loadGraphifyPanels();
+    });
+  } catch (e) {
+    log.textContent += "\nErrore nell'avvio: " + e.message;
+    $("#btnMergeDupes").disabled = false;
+  }
+});
+
+$("#btnAsk").addEventListener("click", async () => {
+  const q = $("#gfQuestion").value.trim();
+  const out = $("#askResult");
+  if (!q) return;
+  const showRaw = $("#gfShowRaw").checked;
+  out.innerHTML = `<p class="empty">Claude sta sintetizzando la risposta dal grafo…</p>`;
+  $("#btnAsk").disabled = true;
+  try {
+    const r = await api("/graphify/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, show_raw: showRaw }),
+    });
+    let html = "";
+    if (showRaw && r.raw) {
+      html += `<details style="margin-bottom:14px"><summary style="cursor:pointer; font-size:13px; color:var(--ink-dim)">Sottografo grezza</summary><div class="log" style="margin-top:8px">${escapeHtml(r.raw)}</div></details>`;
+    }
+    html += `<div class="md">${mdToHtml(r.answer)}</div>`;
+    out.innerHTML = html;
+  } catch (e) {
+    banner(out, "Errore: " + e.message, "err");
+  } finally {
+    $("#btnAsk").disabled = false;
+  }
+});
+
+$("#btnPath").addEventListener("click", async () => {
+  const a = $("#pathA").value.trim(), b = $("#pathB").value.trim();
+  const out = $("#pathResult");
+  if (!a || !b) return;
+  $("#btnPath").disabled = true;
+  try {
+    const r = await api(`/graphify/path?node_a=${encodeURIComponent(a)}&node_b=${encodeURIComponent(b)}`);
+    out.innerHTML = `<div class="log">${escapeHtml(r.path)}</div>`;
+  } catch (e) {
+    banner(out, "Errore: " + e.message, "err");
+  } finally {
+    $("#btnPath").disabled = false;
+  }
+});
+
+let _allNodes = [];
+async function loadNodes() {
+  const wrap = $("#nodesTableWrap");
+  try {
+    const r = await api("/graphify/nodes");
+    _allNodes = r.nodes || [];
+    const communities = [...new Set(_allNodes.map(n => n.community).filter(Boolean))].sort();
+    const sel = $("#nodeCommunityFilter");
+    const current = sel.value;
+    sel.innerHTML = `<option value="">(tutte le community)</option>` +
+      communities.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    sel.value = current;
+    renderNodesTable();
+  } catch (e) {
+    wrap.innerHTML = "";
+    banner(wrap, "Errore nel caricare i nodi: " + e.message, "err");
+  }
+}
+
+function renderNodesTable() {
+  const wrap = $("#nodesTableWrap");
+  const summary = $("#nodesSummary");
+  const community = $("#nodeCommunityFilter").value;
+  const text = $("#nodeTextFilter").value.trim().toLowerCase();
+  let filtered = _allNodes;
+  if (community) filtered = filtered.filter(n => n.community === community);
+  if (text) filtered = filtered.filter(n => n.label.toLowerCase().includes(text));
+
+  if (!_allNodes.length) {
+    summary.textContent = "Nessun nodo";
+    wrap.innerHTML = `<p class="empty">Nessun grafo Graphify trovato ancora, o graph.json ha una struttura imprevista.</p>`;
+    return;
+  }
+  summary.textContent = `${filtered.length} / ${_allNodes.length} nodi — mostra elenco`;
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Nodo</th><th>Community</th><th>Paper</th></tr></thead>
+      <tbody>${filtered.map(n => `
+        <tr><td class="mono">${escapeHtml(n.label)}</td><td>${escapeHtml(n.community)}</td><td>${escapeHtml(n.source)}</td></tr>
+      `).join("")}</tbody>
+    </table>`;
+}
+$("#nodeCommunityFilter").addEventListener("change", renderNodesTable);
+$("#nodeTextFilter").addEventListener("input", renderNodesTable);
+
+async function loadGraphReport() {
+  const out = $("#graphReport");
+  try {
+    const r = await api("/graphify/report");
+    out.innerHTML = mdToHtml(r.markdown);
+  } catch (e) {
+    out.innerHTML = `<p class="empty">Nessun report trovato ancora.</p>`;
+  }
+}
+
+async function loadGraphHtml() {
+  const wrap = $("#graphHtmlWrap");
+  try {
+    await api("/graphify/graph-html-path").then(r => {
+      if (!r.exists) throw new Error("not built");
+    });
+    wrap.innerHTML = `<div class="graph-frame-wrap"><iframe class="graph-frame" src="${API_BASE}/graphify/graph-html"></iframe></div>`;
+  } catch (e) {
+    wrap.innerHTML = `<p class="empty">Nessun grafo Graphify trovato ancora. Usa il pulsante sopra per costruirlo.</p>`;
+  }
+}
+
+async function loadGraphifyPanels() {
+  await Promise.all([loadNodes(), loadGraphReport(), loadGraphHtml()]);
+}
+
+// ----------------------------------------------------------- Riassunti --
+$("#btnSummary").addEventListener("click", async () => {
+  const id = $("#summarySelect").value;
+  const out = $("#summaryResult");
+  if (!id) return;
+  const force = $("#summaryForce").checked;
+  out.innerHTML = `<p class="empty">Generazione in corso…</p>`;
+  $("#btnSummary").disabled = true;
+  try {
+    const r = await api(`/summary/${encodeURIComponent(id)}?force=${force}`);
+    out.innerHTML = mdToHtml(r.summary);
+  } catch (e) {
+    banner(out, "Errore: " + e.message, "err");
+  } finally {
+    $("#btnSummary").disabled = false;
+  }
+});
+
+// ----------------------------------------------------- landing: stats ---
+function updateStatTiles() {
+  const summarized = _lastRows.filter(r => r.summarized).length;
+  const communities = new Set(_allNodes.map(n => n.community).filter(Boolean)).size;
+  $("#statPapers").textContent = _lastRows.length;
+  $("#statSummarized").textContent = summarized;
+  $("#statNodes").textContent = _allNodes.length;
+  $("#statCommunities").textContent = communities;
+}
+
+// ----------------------------------------------------- landing: papers --
+function renderHeroPapers() {
+  const wrap = $("#heroPapers");
+  const items = _lastRows.slice(0, 3);
+  if (!items.length) {
+    wrap.innerHTML = `<div class="hero-card placeholder" style="--rot:-2deg">
+      <span class="hero-card-id">in attesa</span>
+      <p>Nessun paper ancora. Caricane uno nella tab Pipeline.</p>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = items.map((r, i) => `
+    <div class="hero-card" style="--rot:${(i - (items.length - 1) / 2) * 7}deg; --z:${i}; left:${i * 10}px">
+      <span class="hero-card-id">${escapeHtml(r.id)}</span>
+      <p>${escapeHtml(r.titolo.length > 70 ? r.titolo.slice(0, 68) + "…" : r.titolo)}</p>
+      <span class="hero-card-line" style="width:78%"></span>
+      <span class="hero-card-line" style="width:52%"></span>
+      <span class="hero-card-line" style="width:64%"></span>
+    </div>
+  `).join("");
+}
+
+// ----------------------------------------------------- landing: hero graph
+const FALLBACK_HERO_NODES = Array.from({ length: 10 }, (_, i) => ({ label: "", community: String(i % 3) }));
+
+function seededRand(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function layoutHeroNodes(nodes) {
+  const groups = new Map();
+  nodes.forEach(n => {
+    const key = n.community || "_";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(n);
+  });
+  const keys = [...groups.keys()].slice(0, 6);
+  const rand = seededRand(42);
+  const W = 340, H = 260, cx = W / 2, cy = H / 2;
+  const clusterR = Math.min(W, H) * 0.36;
+  const positioned = [];
+  keys.forEach((key, ki) => {
+    const angle = (ki / keys.length) * Math.PI * 2 - Math.PI / 2;
+    const gx = cx + Math.cos(angle) * clusterR;
+    const gy = cy + Math.sin(angle) * clusterR * 0.82;
+    const members = groups.get(key).slice(0, 8);
+    members.forEach((n, i) => {
+      const a2 = (i / Math.max(1, members.length)) * Math.PI * 2 + ki;
+      const r2 = 12 + rand() * 24;
+      positioned.push({ x: gx + Math.cos(a2) * r2, y: gy + Math.sin(a2) * r2, cluster: ki });
+    });
+  });
+  return { positioned, W, H };
+}
+
+let _heroAnimId = null;
+function drawHeroGraph() {
+  const canvas = $("#heroCanvas");
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 260, cssH = canvas.clientHeight || 260;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const source = _allNodes.length ? _allNodes : FALLBACK_HERO_NODES;
+  const { positioned, W, H } = layoutHeroNodes(source);
+  const sx = cssW / W, sy = cssH / H;
+
+  const styles = getComputedStyle(document.documentElement);
+  const accent = styles.getPropertyValue("--accent").trim();
+  const warm = styles.getPropertyValue("--node-warm").trim();
+  const line = styles.getPropertyValue("--line").trim();
+
+  const byCluster = new Map();
+  positioned.forEach((p, i) => {
+    if (!byCluster.has(p.cluster)) byCluster.set(p.cluster, []);
+    byCluster.get(p.cluster).push(i);
+  });
+  const edges = [];
+  byCluster.forEach(idxs => {
+    for (let i = 0; i < idxs.length; i++) edges.push([idxs[i], idxs[(i + 1) % idxs.length]]);
+  });
+  const clusterKeys = [...byCluster.keys()];
+  clusterKeys.forEach((c, i) => {
+    const next = clusterKeys[(i + 1) % clusterKeys.length];
+    if (next !== c) edges.push([byCluster.get(c)[0], byCluster.get(next)[0]]);
+  });
+
+  if (_heroAnimId) cancelAnimationFrame(_heroAnimId);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const duration = reduceMotion ? 0 : 900;
+  const start = performance.now();
+
+  function frame(now) {
+    const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+    const ease = 1 - Math.pow(1 - t, 3);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    ctx.strokeStyle = line;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.6 * ease;
+    edges.forEach(([a, b]) => {
+      const pa = positioned[a], pb = positioned[b];
+      ctx.beginPath();
+      ctx.moveTo(pa.x * sx, pa.y * sy);
+      ctx.lineTo(pa.x * sx + (pb.x - pa.x) * sx * ease, pa.y * sy + (pb.y - pa.y) * sy * ease);
+      ctx.stroke();
+    });
+
+    positioned.forEach((p, i) => {
+      const localT = Math.min(1, Math.max(0, ease * 1.25 - i * 0.012));
+      const r = (2.6 + (i % 3) * 1.1) * localT;
+      ctx.globalAlpha = localT;
+      ctx.fillStyle = p.cluster % 2 === 0 ? accent : warm;
+      ctx.beginPath();
+      ctx.arc(p.x * sx, p.y * sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    if (t < 1) _heroAnimId = requestAnimationFrame(frame);
+  }
+  _heroAnimId = requestAnimationFrame(frame);
+}
+
+let _heroResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(_heroResizeTimer);
+  _heroResizeTimer = setTimeout(drawHeroGraph, 200);
+});
+
+// -------------------------------------------------------------- avvio ---
+async function refreshAll() {
+  await checkConnection();
+  const rows = await loadStatus();
+  populateSelectors(rows);
+  renderHeroPapers();
+  const installed = await loadGraphifyStatus();
+  if (installed) await loadGraphifyPanels();
+  updateStatTiles();
+  drawHeroGraph();
+}
+
+renderHeroPapers();
+drawHeroGraph();
+refreshAll();
+</script>
+</body>
+</html>
