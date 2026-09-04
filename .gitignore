@@ -10,12 +10,21 @@ __pycache__/
 papers/*
 !papers/.gitkeep
 
-# Output della pipeline (markdown parsati, riassunti, manifest, grafo Graphify):
-# rigenerabile da papers/ con `main.py all`, ma consuma chiamate Claude — a
-# tua scelta versionarlo o no (vedi README, "Portare il progetto su un altro
-# computer"). Escluso di default per un repo GitHub pubblico.
-data/parsed/*
-!data/parsed/.gitkeep
+# ATTENZIONE: Graphify risale l'albero delle cartelle da data/parsed/ fino a
+# trovare .git/, fondendo lungo il percorso QUALSIASI .gitignore/.graphifyignore
+# incontrato — incluso questo file. Un pattern come "data/parsed/*" (anche con
+# !data/parsed/.gitkeep) azzera la scansione di graphify: il re-include copre
+# solo il file .gitkeep, non i singoli .md/.meta.json, che restano tutti
+# esclusi -> "0 docs, 0 papers trovati". Per questo data/parsed/*.md e
+# *.meta.json restano VERSIONATI (utile anche per riproducibilità: chi clona
+# il repo ha subito i paper già parsati, senza rilanciare Docling). Escluso
+# solo l'output rigenerabile di Graphify stesso, annidato abbastanza in
+# profondità da non essere soggetto allo stesso problema.
+data/parsed/graphify-out/
+
+# Riassunti e manifest: rigenerabili da `main.py all` + `graphify-extract`,
+# ma consumano chiamate Claude — a tua scelta versionarli o no (vedi README,
+# "Portare il progetto su un altro computer"). Esclusi di default.
 data/summaries/*
 !data/summaries/.gitkeep
 data/manifest.json

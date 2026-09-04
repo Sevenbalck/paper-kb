@@ -1,0 +1,5 @@
+# Generato automaticamente da graphify_kb.py: i .meta.json sono puri
+# metadati (paper_id/title/n_pages/hash) scritti da ingest.py, mai
+# contenuto semantico — escluderli evita chiamate Claude sprecate su
+# file che produrrebbero comunque zero nodi.
+*.meta.json
