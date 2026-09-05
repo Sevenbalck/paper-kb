@@ -528,7 +528,10 @@
 
     <div class="card">
       <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Sfoglia nodi e community</h2>
-      <p class="desc">Terminologia esatta del grafo — usala nelle domande invece di indovinare.</p>
+      <p class="desc">Terminologia esatta del grafo — usala nelle domande invece di indovinare. La
+        colonna "Paper collegati" è piena solo sui nodi frutto di una fusione (vedi sopra): è il
+        segnale più concreto di una correlazione TRA paper diversi — la community da sola non
+        basta, può contenere nodi di un solo paper.</p>
       <div class="row">
         <select id="nodeCommunityFilter"><option value="">(tutte le community)</option></select>
         <input type="search" id="nodeTextFilter" placeholder="filtra per testo nel nome">
@@ -536,6 +539,21 @@
       <details id="nodesDetails" style="margin-top:14px">
         <summary id="nodesSummary" style="cursor:pointer; font-size:13px; color:var(--ink-dim)">—</summary>
         <div id="nodesTableWrap" style="margin-top:12px"><p class="empty">—</p></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="18.5" r="2"></circle><circle cx="18.5" cy="5.5" r="2"></circle><path d="M7 17L17 7"></path></svg>Correlazioni tra paper (a colpo d'occhio)</h2>
+      <p class="desc">
+        Estratto da GRAPH_REPORT.md: i collegamenti che Graphify segnala esplicitamente tra
+        concetti di paper diversi, con la fonte esplicita ("paperA.md → paperB.md") — più
+        diretto della sola colonna "Paper collegati" qui sopra, che cattura solo label quasi
+        identiche fuse dalla fusione duplicati.
+      </p>
+      <div class="md" id="reportHighlights"><p class="empty">—</p></div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--ink-dim)">Gruppi tematici multi-concetto (hyperedges)</summary>
+        <div class="md" id="reportHyperedges" style="margin-top:8px"></div>
       </details>
     </div>
 
@@ -1084,9 +1102,13 @@ function renderNodesTable() {
   summary.textContent = `${filtered.length} / ${_allNodes.length} nodi — mostra elenco`;
   wrap.innerHTML = `
     <table>
-      <thead><tr><th>Nodo</th><th>Community</th><th>Paper</th></tr></thead>
+      <thead><tr><th>Nodo</th><th>Community</th><th>Paper</th><th>Paper collegati</th></tr></thead>
       <tbody>${filtered.map(n => `
-        <tr><td class="mono">${escapeHtml(n.label)}</td><td>${escapeHtml(n.community)}</td><td>${escapeHtml(n.source)}</td></tr>
+        <tr><td class="mono">${escapeHtml(n.label)}</td><td>${escapeHtml(n.community)}</td><td>${escapeHtml(n.source)}</td><td>${
+          n.merged_sources && n.merged_sources.length
+            ? `<span style="color:var(--accent); font-weight:600;">${escapeHtml(n.merged_sources.join(", "))}</span>`
+            : `<span style="color:var(--ink-dim)">—</span>`
+        }</td></tr>
       `).join("")}</tbody>
     </table>`;
 }
@@ -1095,11 +1117,20 @@ $("#nodeTextFilter").addEventListener("input", renderNodesTable);
 
 async function loadGraphReport() {
   const out = $("#graphReport");
+  const highlights = $("#reportHighlights");
+  const hyperedges = $("#reportHyperedges");
   try {
     const r = await api("/graphify/report");
     out.innerHTML = mdToHtml(r.markdown);
+    highlights.innerHTML = r.surprising_connections
+      ? mdToHtml(r.surprising_connections)
+      : `<p class="empty">Nessuna correlazione sorprendente segnalata.</p>`;
+    hyperedges.innerHTML = r.hyperedges
+      ? mdToHtml(r.hyperedges)
+      : `<p class="empty">Nessun gruppo tematico segnalato.</p>`;
   } catch (e) {
     out.innerHTML = `<p class="empty">Nessun report trovato ancora.</p>`;
+    highlights.innerHTML = `<p class="empty">Nessun report trovato ancora.</p>`;
   }
 }
 

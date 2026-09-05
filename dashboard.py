@@ -495,7 +495,10 @@ with tab_graphify:
     st.caption(
         "Terminologia ESATTA presente nel grafo — usala nelle domande invece di "
         "indovinare (es. 'macrophages' funziona meglio di 'macrofagi' o di una "
-        "domanda generica come 'cosa sono i macrofagi'). 100% locale, gratuito."
+        "domanda generica come 'cosa sono i macrofagi'). 100% locale, gratuito. "
+        "La colonna 'paper collegati' è piena solo sui nodi frutto di una fusione "
+        "(vedi sopra): è il segnale più concreto di una correlazione TRA paper "
+        "diversi — la community da sola non basta, può contenere nodi di un solo paper."
     )
     nodes = graphify_mod.list_nodes()
     if nodes:
@@ -519,12 +522,37 @@ with tab_graphify:
 
         st.write(f"**{len(filtered)}** / {len(nodes)} nodi")
         st.dataframe(
-            [{"nodo": n["label"], "community": n["community"], "paper": n["source"]} for n in filtered],
+            [
+                {
+                    "nodo": n["label"],
+                    "community": n["community"],
+                    "paper": n["source"],
+                    "paper collegati": ", ".join(n["merged_sources"]) if n.get("merged_sources") else "",
+                }
+                for n in filtered
+            ],
             width="stretch",
             hide_index=True,
         )
     else:
         st.info("Nessun grafo Graphify trovato ancora, o graph.json ha una struttura imprevista.")
+
+    st.divider()
+    st.subheader("🔗 Correlazioni tra paper (a colpo d'occhio)")
+    st.caption(
+        "Estratto da GRAPH_REPORT.md: i collegamenti che Graphify segnala esplicitamente "
+        "tra concetti di paper diversi, con la fonte esplicita ('paperA.md → paperB.md') — "
+        "più diretto della sola colonna 'paper collegati' qui sopra, che cattura solo "
+        "label quasi identiche fuse dalla fusione duplicati."
+    )
+    highlights = graphify_mod.report_highlights()
+    if highlights["surprising_connections"]:
+        st.markdown(highlights["surprising_connections"])
+    else:
+        st.info("Nessuna correlazione sorprendente segnalata (o report non ancora generato).")
+    if highlights["hyperedges"]:
+        with st.expander("Gruppi tematici multi-concetto (hyperedges)"):
+            st.markdown(highlights["hyperedges"])
 
     st.divider()
     st.subheader("Report ed esplorazione visiva")

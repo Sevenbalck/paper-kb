@@ -349,10 +349,18 @@ def graphify_nodes(community: str | None = None, text: str | None = None):
 
 @app.get("/graphify/report")
 def graphify_report():
+    """Include anche le 'highlights' (Surprising Connections/Hyperedges)
+    estratte da report_highlights(), così il frontend può mostrarle come card
+    a sé senza dover fare un'altra richiesta o riparsare il markdown lui
+    stesso — vedi graphify_kb.report_highlights() sul perché di queste due
+    sezioni in particolare (segnale più diretto di correlazioni cross-paper)."""
     report_path = graphify_mod.graph_report_path()
     if not report_path.exists():
         raise HTTPException(404, "GRAPH_REPORT.md non trovato")
-    return {"markdown": report_path.read_text(encoding="utf-8")}
+    return {
+        "markdown": report_path.read_text(encoding="utf-8"),
+        **graphify_mod.report_highlights(),
+    }
 
 
 @app.get("/graphify/graph-html-path")

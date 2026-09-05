@@ -87,7 +87,13 @@ def list_nodes(target: Path | str | None = None) -> list[dict]:
     domande (es. "macrophages" vs "macrofagi" — vedi answer_question()).
     100% locale, nessuna chiamata Claude. Ritorna lista vuota se il grafo non
     esiste ancora o il JSON ha una struttura imprevista (nel dubbio non fa
-    crashare la dashboard, semplicemente non mostra nulla)."""
+    crashare la dashboard, semplicemente non mostra nulla).
+
+    'merged_sources': popolato solo sui nodi sopravvissuti a
+    merge_duplicate_nodes() (campo 'source_files_merged' scritto lì) — è il
+    segnale più concreto di una correlazione TRA paper diversi (stesso
+    concetto trovato in più documenti), a differenza della sola community
+    (che può benissimo contenere nodi di un solo paper)."""
     graph_path = graph_json_path(target)
     if not graph_path.exists():
         return []
@@ -105,6 +111,7 @@ def list_nodes(target: Path | str | None = None) -> list[dict]:
         if not isinstance(n, dict):
             continue
         community = n.get("community")
+        merged_sources = n.get("source_files_merged")
         nodes.append(
             {
                 "label": n.get("label") or n.get("id") or "(senza nome)",
@@ -116,6 +123,7 @@ def list_nodes(target: Path | str | None = None) -> list[dict]:
                 "community": str(community) if community not in (None, "") else "",
                 "source": n.get("source_file") or n.get("src") or "",
                 "file_type": n.get("file_type") or n.get("type") or "",
+                "merged_sources": merged_sources if isinstance(merged_sources, list) else [],
             }
         )
     return nodes
@@ -123,6 +131,49 @@ def list_nodes(target: Path | str | None = None) -> list[dict]:
 
 def graph_report_path(target: Path | str | None = None) -> Path:
     return graphify_out_dir(target) / "GRAPH_REPORT.md"
+
+
+def _extract_report_section(report_text: str, heading_prefix: str) -> str:
+    """Estrae il corpo di una sezione '## <heading_prefix>...' da GRAPH_REPORT.md,
+    fino alla prossima intestazione di pari livello o alla fine del documento.
+    Il prefisso (non il testo esatto dopo, es. il suffisso parentetico che
+    Graphify aggiunge all'intestazione) evita di rompersi se quel dettaglio
+    cambia tra versioni di Graphify."""
+    # [^\n]* per il resto della riga di intestazione (mai DOTALL li', altrimenti
+    # '.'  attraversa le righe e '$' finisce per ancorarsi molto piu' avanti nel
+    # documento invece che a fine riga); [\s\S]*? per il corpo catturato, che
+    # invece deve poter contenere newline.
+    pattern = re.compile(
+        rf"^## {re.escape(heading_prefix)}[^\n]*\n([\s\S]*?)(?=^## |\Z)",
+        re.MULTILINE,
+    )
+    m = pattern.search(report_text)
+    return m.group(1).strip() if m else ""
+
+
+def report_highlights(target: Path | str | None = None) -> dict:
+    """Estrae da GRAPH_REPORT.md le due sezioni più utili per individuare a
+    colpo d'occhio le correlazioni TRA paper diversi, senza dover scorrere
+    l'intero report (Corpus Check, Community Hubs, God Nodes, il dettaglio di
+    tutte le community, Ambiguous Edges, Knowledge Gaps...):
+
+    - 'surprising_connections': edge INFERRED/AMBIGUOUS tra concetti di paper
+      diversi, con la fonte esplicita ('paperA.md -> paperB.md') — il segnale
+      più diretto e concreto di correlazione cross-paper che il grafo offre,
+      più immediato della sola colonna 'paper collegati' di list_nodes()
+      (quella cattura solo label quasi identiche fuse da merge_duplicate_nodes()).
+    - 'hyperedges': gruppi tematici multi-nodo, alcuni dei quali multi-paper.
+
+    Stringhe vuote se il report non esiste ancora o non contiene quelle
+    sezioni (Graphify le omette se non ha trovato nulla di rilevante)."""
+    report_path = graph_report_path(target)
+    if not report_path.exists():
+        return {"surprising_connections": "", "hyperedges": ""}
+    text = report_path.read_text(encoding="utf-8")
+    return {
+        "surprising_connections": _extract_report_section(text, "Surprising Connections"),
+        "hyperedges": _extract_report_section(text, "Hyperedges"),
+    }
 
 
 def _normalize_label(label) -> str:
