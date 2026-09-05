@@ -4,6 +4,8 @@ Pipeline locale per lavorare con paper scientifici (PDF anche complessi, con tab
 e figure) minimizzando i token spesi con Claude, e per costruire un knowledge graph
 delle correlazioni tra i paper con [Graphify](https://github.com/Graphify-Labs/graphify).
 
+Distribuito sotto licenza [MIT](LICENSE).
+
 ## Come funziona (in breve)
 
 ```

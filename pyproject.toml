@@ -2,6 +2,7 @@
 name = "paper-kb"
 version = "0.2.0"
 description = "Pipeline locale per parsare paper scientifici (PDF complessi), riassumerli con Claude risparmiando token, e costruire un knowledge graph delle correlazioni tra paper con Graphify."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "docling>=2.15.0",
