@@ -40,26 +40,33 @@ lo stesso meccanismo (`--backend claude-cli`), non una API key separata.
 
 Richiede Python 3.11+, Node.js (per Claude Code) e un abbonamento Claude Pro o Max attivo.
 
+### 1. Componenti base — servono per CLI, dashboard Streamlit e frontend web
+
+Un solo giro di installazione basta per **tutti e tre** i modi di usare il progetto
+(`main.py`, `dashboard.py`, `backend.py`+frontend): nessuno di questi richiede passi
+aggiuntivi oltre a questi.
+
 ```bash
-# 1. installa Claude Code e autenticati con la tua sottoscrizione Pro/Max
+# 1a. installa Claude Code e autenticati con la tua sottoscrizione Pro/Max
 npm install -g @anthropic-ai/claude-code
 claude login
 
-# 2. IMPORTANTE: assicurati che non ci sia una API key nell'ambiente,
-#    altrimenti Claude Code la userebbe al posto dell'abbonamento
+# 1b. IMPORTANTE: assicurati che non ci sia una API key nell'ambiente,
+#     altrimenti Claude Code la userebbe al posto dell'abbonamento
 unset ANTHROPIC_API_KEY        # macOS/Linux
 # oppure: $Env:ANTHROPIC_API_KEY = $null   # Windows PowerShell
 
-# 3. installa uv (gestore ambiente Python, una tantum sulla macchina)
+# 1c. installa uv (gestore ambiente Python, una tantum sulla macchina)
 curl -LsSf https://astral.sh/uv/install.sh | sh    # macOS/Linux
 # oppure: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
 
-# 4. entra nella cartella del progetto e sincronizza l'ambiente Python
-#    (installa anche Graphify: è una dipendenza normale del progetto)
+# 1d. entra nella cartella del progetto e sincronizza l'ambiente Python — installa in
+#     un colpo solo TUTTE le dipendenze: Docling, FastAPI/uvicorn, Streamlit e Graphify
+#     (come libreria per l'uso headless, non serve alcun passo separato per quello)
 cd paper-kb
 uv sync
 
-# 5. verifica che tutto funzioni
+# 1e. verifica che tutto funzioni
 uv run python main.py check
 ```
 
@@ -69,6 +76,29 @@ Solo Claude Code va installato/autenticato separatamente su ogni computer (`npm
 install` + `claude login`), un paio di minuti, legato al tuo account non alla macchina.
 
 Senza `uv`, in alternativa: `python -m venv .venv && source .venv/bin/activate && pip install -e .`
+
+A questo punto hai già tutto il necessario per:
+- **CLI**: `uv run python main.py <comando>` — vedi [Elenco comandi](#elenco-comandi)
+- **Dashboard Streamlit**: `uv run streamlit run dashboard.py` — vedi [Dashboard interattiva](#dashboard-interattiva)
+- **Frontend web**: avvia `backend.py`, poi apri un file in `frontend/` — vedi [Frontend web](#frontend-web-fastapi--html-statico)
+
+### 2. Skill interattiva `/graphify` in Claude Code (opzionale, non serve per paper-kb)
+
+Il comando `graphify` usato da questo progetto (extract/cluster-only/query/path,
+invocato sempre in modalità **headless** da `src/graphify_kb.py` via subprocess) è già
+installato al passo 1d come dipendenza normale — **non serve nient'altro per usare
+paper-kb**, questo passo è indipendente e opzionale. Serve solo se vuoi *anche* poter
+scrivere `/graphify` come skill interattiva dentro una sessione Claude Code qualsiasi,
+fuori da questo progetto (per esplorazioni manuali su un knowledge graph a piacere):
+
+```bash
+uv tool install graphifyy
+graphify install
+```
+
+Registra la skill **globalmente per il tuo utente** (non per il singolo progetto) — va
+rifatto una volta per macchina se lavori su più computer, non per ogni progetto che usa
+Graphify.
 
 ### Primo avvio: cosa aspettarsi
 
@@ -252,14 +282,11 @@ python main.py graphify-extract`, o dashboard avviata con `uv run streamlit`), c
 il comando venga trovato nel `.venv` del progetto.
 
 Se preferisci comunque usare anche la modalità interattiva `/graphify` dentro Claude
-Code (per esplorazioni manuali fuori da questo progetto), quella richiede un'installazione
-globale separata e la registrazione della skill:
-```bash
-uv tool install graphifyy
-graphify install
-```
-ma non è necessaria per il funzionamento di questo progetto — `main.py` e la dashboard
-usano sempre e solo la modalità headless (`--backend claude-cli`).
+Code (per esplorazioni manuali fuori da questo progetto) — vedi
+[Setup, punto 2](#2-skill-interattiva-graphify-in-claude-code-opzionale-non-serve-per-paper-kb)
+per come installarla: è un passo indipendente e opzionale, non necessario per il
+funzionamento di questo progetto — `main.py` e la dashboard usano sempre e solo la
+modalità headless (`--backend claude-cli`).
 
 ### Uso
 
