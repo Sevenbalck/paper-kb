@@ -226,6 +226,23 @@
     padding: 12px 14px; font: 12px/1.5 var(--mono); white-space: pre-wrap;
     max-height: 320px; overflow-y: auto; color: var(--ink);
   }
+
+  .chat-thread {
+    display: flex; flex-direction: column; gap: 12px; max-height: 480px; overflow-y: auto;
+    padding: 4px 2px; margin-bottom: 12px;
+  }
+  .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.5; }
+  .chat-msg.user { align-self: flex-end; background: var(--accent-soft); color: var(--ink); border-bottom-right-radius: 3px; }
+  .chat-msg.assistant { align-self: flex-start; background: var(--panel-raised); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+  .chat-msg.assistant.pending { color: var(--ink-dim); font-style: italic; }
+  .chat-msg .md { font-size: 13.5px; }
+  .chat-msg .md p:first-child { margin-top: 0; }
+  .chat-msg .md p:last-child { margin-bottom: 0; }
+  .chat-empty { color: var(--ink-dim); font-size: 13px; font-style: italic; padding: 8px 2px; }
+  .chat-caveat {
+    font-size: 12px; color: var(--ink-dim); border-left: 3px solid var(--node-warm);
+    background: var(--code-bg); padding: 6px 10px; border-radius: 4px; margin-bottom: 10px;
+  }
   .progress { height: 5px; border-radius: 999px; background: var(--code-bg); overflow: hidden; margin: 10px 0; }
   .progress > div { height: 100%; background: var(--accent); width: 0%; transition: width .3s; }
 
@@ -240,6 +257,7 @@
   .md pre code { background: none; padding: 0; }
   .md ul { padding-left: 20px; }
   .md a { color: var(--accent); }
+  .md table { margin: 10px 0; }
 
   #nodesTableWrap { max-height: 380px; overflow-y: auto; }
   details > summary { user-select: none; }
@@ -468,17 +486,31 @@
     </div>
 
     <div class="card">
-      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>Fai una domanda al grafo</h2>
-      <p class="desc">2 chiamate Claude per domanda (riformulazione in inglese + sintesi della risposta).</p>
+      <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>Fai una domanda ai paper (ricerca full-text)</h2>
+      <p class="desc">
+        Cerca direttamente nei markdown grezzi in data/parsed/ (non nel grafo): trova i
+        paragrafi più rilevanti per parole chiave e sintetizza una risposta citando le
+        fonti — più affidabile del grafo su domande fattuali/quantitative puntuali
+        ("quale concentrazione", "quanti pazienti", "quale dose"), che spesso non
+        sopravvivono come attributo di un nodo durante l'estrazione semantica del grafo.
+        2 chiamate Claude per messaggio (estrazione keyword + sintesi finale). Ricorda la
+        conversazione: puoi fare domande di follow-up ("e nei topi invece?") —
+        per contenere i token, mantiene solo gli ultimi scambi recenti come
+        contesto (configurabile in config.yaml).
+      </p>
+      <div id="ftThread" class="chat-thread"><p class="chat-empty">Nessuna domanda ancora — scrivi qui sotto per iniziare.</p></div>
       <div class="row">
-        <input type="text" id="gfQuestion" placeholder="cosa collega PD-1 al metabolismo dei macrofagi?" style="flex:1; min-width:260px">
-        <label class="chk"><input type="checkbox" id="gfShowRaw"> mostra sottografo grezza</label>
-        <button class="btn primary" id="btnAsk">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M19.5 19.5L15.2 15.2"></path></svg>
-          Chiedi
+        <input type="text" id="ftQuestion" placeholder="quale concentrazione di lattato è usata nelle T Reg?" style="flex:1; min-width:260px">
+        <label class="chk"><input type="checkbox" id="ftShowSnippets"> mostra paragrafi grezzi trovati</label>
+        <button class="btn primary" id="btnFulltextAsk">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4z"></path></svg>
+          Invia
+        </button>
+        <button class="btn ghost" id="btnFulltextReset" title="Nuova conversazione">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"></path><path d="M9.5 7V4.8c0-.4.4-.8.9-.8h3.2c.5 0 .9.4.9.8V7"></path><path d="M7 7l.8 12a1.6 1.6 0 0 0 1.6 1.5h5.2A1.6 1.6 0 0 0 16.2 19L17 7"></path></svg>
+          Nuova conversazione
         </button>
       </div>
-      <div id="askResult" style="margin-top:14px"></div>
     </div>
 
     <div class="card">
@@ -597,19 +629,60 @@ function escapeHtml(s) {
   })[c]);
 }
 
-// ---- minimal markdown -> html (headers, bold/italic, code, lists, links) --
+// ---- minimal markdown -> html (headers, bold/italic, code, lists, links, tables) --
+function _mdInline(raw) {
+  return escapeHtml(raw)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, "<i>$1</i>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+function _mdTableRow(line) {
+  let l = line.trim();
+  if (l.startsWith("|")) l = l.slice(1);
+  if (l.endsWith("|")) l = l.slice(0, -1);
+  return l.split("|").map(c => c.trim());
+}
+
+function _mdIsTableSeparator(line) {
+  const cells = _mdTableRow(line);
+  return cells.length > 0 && cells.every(c => /^:?-{1,}:?$/.test(c));
+}
+
 function mdToHtml(md) {
   if (!md) return "";
   const lines = md.split("\n");
   let html = "";
   let inCode = false, inList = false;
-  for (let raw of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+
     if (raw.trim().startsWith("```")) {
       html += inCode ? "</code></pre>" : "<pre><code>";
       inCode = !inCode;
       continue;
     }
     if (inCode) { html += escapeHtml(raw) + "\n"; continue; }
+
+    // Tabella GFM: riga con "|" seguita da una riga separatore (---|---|...)
+    if (raw.includes("|") && i + 1 < lines.length && _mdIsTableSeparator(lines[i + 1])) {
+      if (inList) { html += "</ul>"; inList = false; }
+      const header = _mdTableRow(raw).map(_mdInline);
+      const bodyRows = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].includes("|") && lines[j].trim() !== "") {
+        bodyRows.push(_mdTableRow(lines[j]).map(_mdInline));
+        j++;
+      }
+      html += `<div style="overflow-x:auto"><table><thead><tr>${
+        header.map(c => `<th>${c}</th>`).join("")
+      }</tr></thead><tbody>${
+        bodyRows.map(cells => `<tr>${cells.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")
+      }</tbody></table></div>`;
+      i = j - 1;
+      continue;
+    }
 
     let line = escapeHtml(raw);
     const isListItem = /^\s*[-*]\s+/.test(raw);
@@ -893,29 +966,70 @@ $("#btnMergeDupes").addEventListener("click", async () => {
   }
 });
 
-$("#btnAsk").addEventListener("click", async () => {
-  const q = $("#gfQuestion").value.trim();
-  const out = $("#askResult");
+let _ftHistory = [];
+
+function ftAppendMessage(role, innerHtml, opts) {
+  opts = opts || {};
+  const thread = $("#ftThread");
+  const empty = thread.querySelector(".chat-empty");
+  if (empty) empty.remove();
+  const div = document.createElement("div");
+  div.className = "chat-msg " + role + (opts.pending ? " pending" : "");
+  div.innerHTML = innerHtml;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+function ftResetThread() {
+  _ftHistory = [];
+  $("#ftThread").innerHTML = `<p class="chat-empty">Nessuna domanda ancora — scrivi qui sotto per iniziare.</p>`;
+}
+$("#btnFulltextReset").addEventListener("click", ftResetThread);
+
+$("#btnFulltextAsk").addEventListener("click", async () => {
+  const q = $("#ftQuestion").value.trim();
   if (!q) return;
-  const showRaw = $("#gfShowRaw").checked;
-  out.innerHTML = `<p class="empty">Claude sta sintetizzando la risposta dal grafo…</p>`;
-  $("#btnAsk").disabled = true;
+  const showSnippets = $("#ftShowSnippets").checked;
+
+  ftAppendMessage("user", escapeHtml(q));
+  $("#ftQuestion").value = "";
+  const pendingEl = ftAppendMessage(
+    "assistant", "Ricerca nei markdown ed elaborazione della risposta…", { pending: true }
+  );
+  $("#btnFulltextAsk").disabled = true;
   try {
-    const r = await api("/graphify/ask", {
+    const r = await api("/fulltext/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: q, show_raw: showRaw }),
+      body: JSON.stringify({ question: q, show_snippets: showSnippets, history: _ftHistory }),
     });
     let html = "";
-    if (showRaw && r.raw) {
-      html += `<details style="margin-bottom:14px"><summary style="cursor:pointer; font-size:13px; color:var(--ink-dim)">Sottografo grezza</summary><div class="log" style="margin-top:8px">${escapeHtml(r.raw)}</div></details>`;
+    if (showSnippets && r.snippets) {
+      const body = r.snippets.map(([source, paragraph]) =>
+        `<p style="margin:0 0 4px"><b>[${escapeHtml(source)}]</b></p><div class="log" style="margin-bottom:12px">${escapeHtml(paragraph)}</div>`
+      ).join("");
+      html += `<details style="margin-bottom:10px"><summary style="cursor:pointer; font-size:12.5px; color:var(--ink-dim)">Paragrafi grezzi trovati (${r.snippets.length})</summary><div style="margin-top:8px">${body || '<p class="empty">Nessun paragrafo pertinente trovato.</p>'}</div></details>`;
+    }
+    if (r.multi_source && r.sources && r.sources.length > 1) {
+      html += `<div class="chat-caveat">⚠ Risposta basata su paragrafi da ${r.sources.length} paper diversi (${r.sources.map(escapeHtml).join(", ")}) — verifica che dati o condizioni sperimentali di paper diversi non siano stati mescolati.</div>`;
     }
     html += `<div class="md">${mdToHtml(r.answer)}</div>`;
-    out.innerHTML = html;
+    pendingEl.className = "chat-msg assistant";
+    pendingEl.innerHTML = html;
+    _ftHistory.push({ question: q, answer: r.answer });
   } catch (e) {
-    banner(out, "Errore: " + e.message, "err");
+    pendingEl.className = "chat-msg assistant";
+    pendingEl.innerHTML = `<span style="color:var(--err)">Errore: ${escapeHtml(e.message)}</span>`;
   } finally {
-    $("#btnAsk").disabled = false;
+    $("#btnFulltextAsk").disabled = false;
+  }
+});
+
+$("#ftQuestion").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    $("#btnFulltextAsk").click();
   }
 });
 

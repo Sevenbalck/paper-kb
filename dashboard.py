@@ -24,8 +24,12 @@ main.py:
   - all              -> ingest_all() + graphify_kb.run_extract(), stesso ordine di main.py
   - summarize        -> summarize.summarize()
   - graphify-extract -> graphify_kb.run_extract() (extract + cluster-only)
-  - graphify-query   -> graphify_kb.run_query() (sottografo grezza, locale)
-  - graphify-ask      -> graphify_kb.answer_question() (risposta in prosa, 1 chiamata Claude)
+  - ask-fulltext      -> fulltext_qa.answer_question_fulltext() (unico canale di Q&A
+                         della dashboard: ricerca full-text su data/parsed/, 2 chiamate
+                         Claude). graphify-ask/graphify-query restano disponibili da CLI
+                         (main.py) e da backend.py, ma non hanno più un pulsante qui: sul
+                         corpus attuale il full-text dava risposte più utili e i nodi del
+                         grafo erano difficili da azzeccare come punto di partenza.
   - graphify-path     -> graphify_kb.run_path() (locale)
 """
 
@@ -50,6 +54,7 @@ try:
     import graphify_kb as graphify_mod
     import ingest as ingest_mod
     import summarize as summarize_mod
+    import fulltext_qa as fulltext_mod
     import utils
 except ImportError as e:
     st.error(
@@ -433,27 +438,37 @@ with tab_graphify:
                 st.info("Nessun nodo duplicato trovato: grafo già pulito.")
 
     st.divider()
-    st.subheader("Fai una domanda al grafo")
+    st.subheader("Fai una domanda ai paper (ricerca full-text)")
     st.caption(
-        "🔴 Consuma 2 chiamate Claude per domanda: una piccola per riformulare "
-        "la domanda nel vocabolario inglese del grafo (i paper sono in inglese "
-        "anche se scrivi in italiano), una per sintetizzare la risposta dalla "
-        "sottografo trovata — il risparmio rispetto al RAG di prima sta nella "
-        "dimensione del contesto mandato a Claude, non nell'azzerare le chiamate."
+        "Cerca direttamente nei markdown grezzi in data/parsed/ (non nel grafo): "
+        "trova i paragrafi più rilevanti per parole chiave e sintetizza una "
+        "risposta citando le fonti. Più affidabile del grafo su domande "
+        "fattuali/quantitative puntuali ('quale concentrazione', 'quanti "
+        "pazienti', 'quale dose') — quei valori numerici, incastonati in "
+        "didascalie di figure o metodi, spesso non sopravvivono come attributo "
+        "di un nodo durante l'estrazione semantica del grafo. 🔴 Consuma 2 "
+        "chiamate Claude (estrazione keyword + sintesi finale)."
     )
-    gf_question = st.text_input(
-        "Domanda", placeholder="cosa collega PD-1 al metabolismo dei macrofagi?",
-        key="graphify_question",
+    ft_question = st.text_input(
+        "Domanda", placeholder="quale concentrazione di lattato è usata nelle T Reg?",
+        key="fulltext_question",
     )
-    show_raw = st.checkbox("Mostra anche la sottografo grezza (nodi/edge)", key="graphify_show_raw")
-    if st.button("🔎 Chiedi a Graphify", disabled=not (graphify_installed and gf_question.strip())):
-        with st.spinner("Claude sta sintetizzando la risposta dal grafo..."):
+    show_snippets = st.checkbox(
+        "Mostra anche i paragrafi grezzi trovati", key="fulltext_show_snippets"
+    )
+    if st.button("🔎 Cerca nel testo grezzo", disabled=not ft_question.strip()):
+        with st.spinner("Ricerca nei markdown ed elaborazione della risposta..."):
             try:
-                if show_raw:
-                    raw = graphify_mod.run_query(gf_question)
-                    with st.expander("Sottografo grezza restituita dal grafo"):
-                        st.code(raw, language="text")
-                answer = graphify_mod.answer_question(gf_question)
+                if show_snippets:
+                    snippets = fulltext_mod.search_fulltext(ft_question)
+                    with st.expander("Paragrafi grezzi trovati (ordinati per rilevanza)"):
+                        for source, paragraph in snippets:
+                            st.markdown(f"**[{source}]**")
+                            st.text(paragraph)
+                            st.divider()
+                    answer = fulltext_mod.answer_from_snippets(ft_question, snippets)
+                else:
+                    answer = fulltext_mod.answer_question_fulltext(ft_question)
                 st.markdown(answer)
             except Exception as e:  # noqa: BLE001
                 st.error(f"Errore: {e}")

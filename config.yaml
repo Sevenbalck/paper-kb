@@ -25,6 +25,13 @@ claude:
   # viene condensato (titolo+abstract+intestazioni+conclusioni) invece di inviare
   # il documento intero: risparmia token sui paper lunghi.
   condense_threshold_chars: 20000
+  # Chat "ask-fulltext": quanti turni precedenti passare a Claude come contesto
+  # per interpretare i follow-up, e quanti caratteri di ciascuna risposta passata
+  # mantenere (troncata oltre, con "…"). Senza questo tetto una conversazione
+  # lunga farebbe crescere senza limite il testo (e i token) rimandati a Claude
+  # a ogni nuovo messaggio — vedi fulltext_qa._format_history().
+  fulltext_chat_max_turns: 6
+  fulltext_chat_max_answer_chars: 500
 
 # Nota: il grafo delle correlazioni tra paper (topic/metodi/dataset condivisi, Q&A)
 # e' gestito interamente da Graphify (comando esterno 'graphify', non da questo

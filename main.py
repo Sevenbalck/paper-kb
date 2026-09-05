@@ -10,6 +10,7 @@ Uso tipico:
     python main.py graphify-extract    # costruisce/aggiorna il grafo Graphify
     python main.py graphify-query "domanda"   # sottografo grezza (locale, gratuito)
     python main.py graphify-ask "domanda"     # risposta in prosa (1 chiamata Claude)
+    python main.py ask-fulltext "domanda"     # fallback full-text per domande quantitative (2 chiamate Claude)
     python main.py graphify-merge-dupes       # fonde nodi duplicati sul grafo esistente (locale, gratuito)
     python main.py summarize <id>      # riassunto di un paper (1 chiamata Claude, cachata)
     python main.py status              # cosa è stato processato finora
@@ -91,6 +92,17 @@ def graphify_ask_cmd(question: str):
     ridotto al solo sottografo pertinente, non l'intero paper)."""
     from graphify_kb import answer_question
     print(answer_question(question))
+
+
+@cli.command(name="ask-fulltext")
+@click.argument("question")
+def ask_fulltext_cmd(question: str):
+    """Fallback di 'graphify-ask' per domande fattuali/quantitative (concentrazioni,
+    dosi, N di pazienti) su cui il grafo di concetti tende a non trovare nulla.
+    Cerca direttamente nei markdown grezzi in data/parsed/ invece che nel grafo
+    Graphify. 🔴 consuma 2 chiamate Claude (estrazione keyword + sintesi)."""
+    from fulltext_qa import answer_question_fulltext
+    print(answer_question_fulltext(question))
 
 
 @cli.command(name="graphify-path")

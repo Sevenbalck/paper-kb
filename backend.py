@@ -38,6 +38,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+import fulltext_qa as fulltext_mod  # noqa: E402
 import graphify_kb as graphify_mod  # noqa: E402
 import ingest as ingest_mod  # noqa: E402
 import summarize as summarize_mod  # noqa: E402
@@ -284,6 +285,45 @@ def graphify_ask(body: AskBody):
         raw = graphify_mod.run_query(body.question) if body.show_raw else None
         answer = graphify_mod.answer_question(body.question)
         return {"answer": answer, "raw": raw}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(500, str(e)) from e
+
+
+class FulltextAskBody(BaseModel):
+    question: str
+    show_snippets: bool = False
+    # Turni precedenti [{"question": ..., "answer": ...}, ...], nell'ordine in cui
+    # sono avvenuti — il frontend tiene la conversazione lato client (nessuno
+    # stato di sessione qui) e la rimanda per intero a ogni domanda, così i
+    # follow-up ("e nei topi?") vengono interpretati nel contesto giusto.
+    history: list[dict] = []
+
+
+@app.post("/fulltext/ask")
+def fulltext_ask(body: FulltextAskBody):
+    """Fallback di /graphify/ask per domande fattuali/quantitative (concentrazioni,
+    dosi, N di pazienti) su cui il grafo di concetti tende a non trovare nulla —
+    vedi fulltext_qa.py. Chiama sempre search_fulltext() + answer_from_snippets()
+    separatamente (mai answer_question_fulltext(), che le incapsula entrambe ma
+    nasconderebbe i paragrafi trovati) — stessa riformulazione keyword una sola
+    volta, nessuna chiamata Claude in più rispetto a prima.
+
+    'sources'/'multi_source' vengono calcolati SEMPRE (non solo con
+    show_snippets=True): mescolare nella stessa risposta paragrafi da paper
+    diversi è il principale rischio di confusione/allucinazione della ricerca
+    full-text (es. condizioni sperimentali di due paper diversi presentate
+    come se fossero la stessa) — il frontend mostra un avviso quando capita,
+    a prescindere da se l'utente ha scelto di vedere anche i paragrafi grezzi."""
+    try:
+        snippets = fulltext_mod.search_fulltext(body.question, history=body.history)
+        answer = fulltext_mod.answer_from_snippets(body.question, snippets, history=body.history)
+        sources = sorted({source for source, _ in snippets})
+        return {
+            "answer": answer,
+            "snippets": snippets if body.show_snippets else None,
+            "sources": sources,
+            "multi_source": len(sources) > 1,
+        }
     except Exception as e:  # noqa: BLE001
         raise HTTPException(500, str(e)) from e
 

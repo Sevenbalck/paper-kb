@@ -141,11 +141,17 @@ paper-kb/
 | `main.py summarize <id>` | Riassunto strutturato di un paper (cachato) | Sì (1, poi cache) |
 | `main.py graphify-query "<domanda>"` | Sottografo grezza (nodi/edge) dal grafo Graphify | No (locale) |
 | `main.py graphify-ask "<domanda>"` | Risposta in prosa, sintetizzata da Claude sulla sottografo | Sì (2 per domanda: riformulazione + sintesi) |
+| `main.py ask-fulltext "<domanda>"` | Risposta in prosa cercando nei markdown grezzi (non nel grafo) — vedi [Ricerca full-text](#ricerca-full-text-nei-paper-ask-fulltext) | Sì (2 per domanda: keyword + sintesi) |
 | `main.py graphify-path <a> <b>` | Percorso più breve tra due concetti nel grafo | No (locale) |
 | `main.py graphify-merge-dupes` | Fonde nodi duplicati su un grafo già costruito (già incluso in `graphify-extract`/`all`) | No (locale) |
 
 Tutti questi comandi sono disponibili anche da interfaccia web — vedi la sezione
-[Dashboard interattiva](#dashboard-interattiva) più sotto.
+[Dashboard interattiva](#dashboard-interattiva) più sotto — **tranne `graphify-query` e
+`graphify-ask`**: restano disponibili da CLI e da chiamata diretta all'API
+(`POST /graphify/ask` in `backend.py`), ma non hanno più un pulsante in dashboard/frontend.
+Sul corpus di questo progetto la ricerca full-text dava risposte più utili e i nodi del
+grafo erano difficili da azzeccare come punto di partenza — vedi
+[Ricerca full-text](#ricerca-full-text-nei-paper-ask-fulltext) per il motivo strutturale.
 
 ---
 
@@ -154,9 +160,12 @@ Tutti questi comandi sono disponibili anche da interfaccia web — vedi la sezio
 In alternativa alla CLI, `dashboard.py` offre un'interfaccia web locale (Streamlit) con
 le stesse azioni di `main.py`, su 4 tab: **Stato** (verifica setup, tabella paper,
 eliminazione), **Pipeline** (upload PDF, esecuzione `all`/`ingest`/`graphify-extract`
-con log in tempo reale), **Graphify** (costruzione grafo, query in linguaggio naturale,
-percorso tra due concetti, `graph.html`/`GRAPH_REPORT.md` incorporati nella pagina) e
-**Riassunti**.
+con log in tempo reale), **Graphify** (costruzione grafo, [ricerca full-text nei
+paper](#ricerca-full-text-nei-paper-ask-fulltext), percorso tra due concetti,
+`graph.html`/`GRAPH_REPORT.md` incorporati nella pagina) e **Riassunti**. Non c'è un
+pulsante per interrogare direttamente il grafo (`graphify-ask`/`graphify-query`): la
+ricerca full-text ha dato risultati migliori su questo corpus, vedi la sezione
+[Graphify](#graphify-grafo-delle-correlazioni-e-qa) per i dettagli.
 
 ```bash
 uv run streamlit run dashboard.py
@@ -259,12 +268,15 @@ python main.py graphify-ask "domanda"         # risposta in prosa (2 chiamate Cl
 python main.py graphify-path "PD-1" "MCT1"    # percorso più breve tra due concetti (locale, gratuito)
 ```
 
-Oppure dalla dashboard, tab **Graphify**, che include anche un browser di nodi/community
-(filtrabile per community o per testo) per scoprire la terminologia esatta usata nel
-grafo prima di formulare una domanda — utile perché il matching dei nodi di partenza in
-Graphify è sensibile alla formulazione: termini tecnici precisi (es. "PD-1", "MCT1")
-funzionano molto meglio di domande generiche o termini che non compaiono nei paper con
-quella esatta dicitura.
+`graphify-query`/`graphify-ask` restano disponibili da CLI e da `POST /graphify/ask` in
+`backend.py`, ma **non hanno più un pulsante in dashboard.py/frontend**: sul corpus di
+questo progetto la [ricerca full-text](#ricerca-full-text-nei-paper-ask-fulltext) dava
+risposte più utili sulle stesse domande, e i nodi del grafo erano difficili da azzeccare
+come punto di partenza (serviva sfogliare la terminologia esatta prima di poter
+formulare una domanda che agganciasse qualcosa). Il browser di nodi/community
+(filtrabile per community o per testo) resta comunque disponibile in dashboard/frontend,
+tab **Graphify** — utile per esplorare il grafo anche senza interrogarlo con domande, o
+per usare `graphify-path` con i nomi esatti dei nodi.
 
 `graphify-extract` esegue in realtà **due passi** in sequenza, entrambi con `--backend
 claude-cli` (instrada tramite lo stesso `claude` CLI headless già usato da
@@ -345,10 +357,53 @@ diverse per punteggiatura/maiuscole, es. `"GLUT1 (Glucose Transporter)"` (da un 
   Graphify, sotto la sezione di costruzione del grafo (mostra quanti gruppi sono stati
   fusi e il conteggio nodi/archi prima→dopo).
 
-> **Nota:** il frontend `frontend/paper-kb-standalone.html` (variante Claude Design) non
-> ha ancora questi controlli — al momento la fusione duplicati è disponibile solo da CLI,
-> dashboard Streamlit e `frontend/index.html`. Il backend (`backend.py`) la espone già:
-> basta riportare gli stessi elementi UI anche in quel frontend.
+### Ricerca full-text nei paper (ask-fulltext)
+
+`fulltext_qa.py` è un secondo canale di Q&A, indipendente da Graphify: non tocca mai
+`graph.json`, non sa nemmeno che il grafo esiste. Cerca direttamente nei markdown grezzi
+in `data/parsed/` (quelli prodotti da Docling, prima di Graphify):
+
+1. Riformula la domanda in parole chiave inglesi (🔴 1 chiamata Claude).
+2. Divide ogni markdown in paragrafi e li punteggia per corrispondenza di parole chiave
+   — locale, gratuito. Bonus di punteggio se il paragrafo contiene anche un valore
+   numerico con unità di misura (segnale forte per domande tipo "quale concentrazione").
+3. Sintetizza una risposta in prosa **solo** dai paragrafi trovati, citando la fonte per
+   ogni affermazione (🔴 1 chiamata Claude). Se non trova nessun paragrafo pertinente,
+   lo dice esplicitamente invece di rispondere — Claude non viene nemmeno interpellato
+   in quel caso.
+
+**Perché esiste**: `graphify-ask` sintetizza da nodi/edge — un'astrazione del testo
+prodotta da un'altra chiamata Claude durante `graphify-extract` — e proprio i dettagli
+quantitativi (concentrazioni, dosi, N di pazienti) sono ciò che quell'estrazione tende a
+perdere per prima. La ricerca full-text passa a Claude il testo verbatim del paper: più
+vicino a "leggi e cita" che a "narra una storia plausibile partendo da etichette
+astratte", quindi meno soggetto ad allucinazioni sui dettagli quantitativi — non
+zero, però: i rischi residui sono keyword mal riformulate che pescano paragrafi veri ma
+irrilevanti, e soprattutto **mescolare paper diversi** nella stessa risposta (due
+condizioni sperimentali distinte presentate come se fossero la stessa). Per questo la
+UI mostra un avviso quando i paragrafi trovati provengono da più di un paper, e un
+checkbox "mostra paragrafi grezzi trovati" per verificare a colpo d'occhio cosa Claude
+aveva davvero sotto mano.
+
+In dashboard/frontend è gestita come una **chat con memoria**: ogni nuova domanda può
+fare riferimento a quelle precedenti ("e nei topi invece?"), perché il client rimanda
+per intero lo storico della conversazione a ogni richiesta (`POST /fulltext/ask`, campo
+`history`). Per evitare che una conversazione lunga faccia crescere senza limite il
+testo (e i token) mandati a Claude, `_format_history()` in `fulltext_qa.py` applica
+sempre due tetti, configurabili in `config.yaml`:
+
+```yaml
+claude:
+  fulltext_chat_max_turns: 6           # quanti turni recenti tenere come contesto
+  fulltext_chat_max_answer_chars: 500  # quanti caratteri di ogni risposta passata mantenere
+```
+
+I turni più vecchi e la coda delle risposte più lunghe vengono scartati silenziosamente:
+la cronologia serve solo a interpretare a cosa si riferisce la domanda nuova, non è mai
+la fonte dei fatti (quella resta sempre il contesto di paragrafi della domanda corrente).
+
+Disponibile da CLI (`main.py ask-fulltext "domanda"`), da dashboard/frontend (tab
+Graphify) e da `POST /fulltext/ask` in `backend.py`.
 
 ### Eliminare un paper
 
